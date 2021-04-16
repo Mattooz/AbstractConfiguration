@@ -1,0 +1,20 @@
+plugins {
+    id 'java'
+}
+
+group 'me.mattoz'
+version '0.1 ALPHA'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    implementation group: 'org.json', name: 'json', version: '20210307'
+}
+
+test {
+    useJUnitPlatform()
+}
