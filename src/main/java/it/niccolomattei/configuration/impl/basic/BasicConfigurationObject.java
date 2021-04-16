@@ -28,7 +28,7 @@ public class BasicConfigurationObject implements ConfigurationObject {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <E> E obt(String key) throws ConfigurationException {
+    public <E> E get(String key) throws ConfigurationException {
         if (key == null || key.isEmpty()) throw ConfigurationException.throwConfigException("Key is empty! At: " + getFullPath(key));
 
         String[] path = key.split("\\.");
@@ -41,14 +41,14 @@ public class BasicConfigurationObject implements ConfigurationObject {
             ConfigurationObject nested = this;
             while (depth < path.length - 1) {
                 try {
-                    nested = nested.obt(path[depth]);
+                    nested = nested.get(path[depth]);
                 } catch (ClassCastException | NullPointerException ex) {
                     throw ConfigurationException.throwConfigException("Error while obtaining object: couldn't retrieve nested ConfigurationObject. At: " + getFullPath(key));
                 }
                 depth++;
             }
 
-            o = nested.obt(path[path.length - 1]);
+            o = nested.get(path[path.length - 1]);
         }
 
         E e;
@@ -65,7 +65,7 @@ public class BasicConfigurationObject implements ConfigurationObject {
     public <E> E opt(String key, E defaultValue) {
         E e = null;
         try {
-            e = obt(key);
+            e = get(key);
         } catch (ConfigurationException ex) {
             //do nothing
         }
@@ -112,12 +112,12 @@ public class BasicConfigurationObject implements ConfigurationObject {
 
     @Override
     public Optional<String> optString(String key) {
-        return Optional.ofNullable(obt(key));
+        return Optional.ofNullable(get(key));
     }
 
     @Override
     public String getString(String key) throws ConfigurationException {
-        String s = obt(key);
+        String s = get(key);
         if (s == null)
             throw ConfigurationException.throwConfigException("Error while obtaining String: config doesn't contain key. At: " + getFullPath(key));
         return s;
@@ -125,12 +125,12 @@ public class BasicConfigurationObject implements ConfigurationObject {
 
     @Override
     public Optional<Integer> optInt(String key) {
-        return Optional.ofNullable(obt(key));
+        return Optional.ofNullable(get(key));
     }
 
     @Override
     public int getInt(String key) throws ConfigurationException {
-        Integer i = obt(key);
+        Integer i = get(key);
         if (i == null)
             throw ConfigurationException.throwConfigException("Error while obtaining Integer: config doesn't contain key. At: " + getFullPath(key));
         return i;
@@ -138,12 +138,12 @@ public class BasicConfigurationObject implements ConfigurationObject {
 
     @Override
     public Optional<Long> optLong(String key) {
-        return Optional.ofNullable(obt(key));
+        return Optional.ofNullable(get(key));
     }
 
     @Override
     public long getLong(String key) throws ConfigurationException {
-        Long l = obt(key);
+        Long l = get(key);
         if (l == null)
             throw ConfigurationException.throwConfigException("Error while obtaining Long: config doesn't contain key. At: " + getFullPath(key));
         return l;
@@ -151,12 +151,12 @@ public class BasicConfigurationObject implements ConfigurationObject {
 
     @Override
     public Optional<Short> optShort(String key) {
-        return Optional.ofNullable(obt(key));
+        return Optional.ofNullable(get(key));
     }
 
     @Override
     public short getShort(String key) throws ConfigurationException {
-        Short s = obt(key);
+        Short s = get(key);
         if (s == null)
             throw ConfigurationException.throwConfigException("Error while obtaining Short: config doesn't contain key. At: " + getFullPath(key));
         return s;
@@ -164,12 +164,12 @@ public class BasicConfigurationObject implements ConfigurationObject {
 
     @Override
     public Optional<ConfigurationObject> optSection(String key) {
-        return Optional.ofNullable(obt(key));
+        return Optional.ofNullable(get(key));
     }
 
     @Override
     public ConfigurationObject getSection(String key) throws ConfigurationException {
-        ConfigurationObject obt = obt(key);
+        ConfigurationObject obt = get(key);
         if (obt == null)
             throw ConfigurationException.throwConfigException("Error while obtaining section: config doesn't contain key. At: " + getFullPath(key));
         return obt;

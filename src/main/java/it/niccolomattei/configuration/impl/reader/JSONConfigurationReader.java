@@ -87,7 +87,7 @@ public class JSONConfigurationReader implements ConfigurationReader<JSONObject, 
         JSONObject toOriginal = new JSONObject();
 
         for (String key : object.keySet()) {
-            Object o = object.obt(key);
+            Object o = object.get(key);
             if (o instanceof String || o instanceof Number) {
                 toOriginal.put(key, o);
             } else if (o instanceof ConfigurationObject) {

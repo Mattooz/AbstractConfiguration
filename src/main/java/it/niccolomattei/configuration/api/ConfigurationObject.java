@@ -1,6 +1,5 @@
 package it.niccolomattei.configuration.api;
 
-import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
 
@@ -19,7 +18,7 @@ public interface ConfigurationObject extends ConfigurationElement {
      * @return the value if it is found and no exception are thrown
      * @throws ConfigurationException if it fails to cast or no value is present at a given key
      */
-    <E> E obt(String key) throws ConfigurationException;
+    <E> E get(String key) throws ConfigurationException;
 
     /**
      * Retrieves a value from the ConfigurationObject and returns it as a desired type.
@@ -39,7 +38,7 @@ public interface ConfigurationObject extends ConfigurationElement {
 
     /**
      * Puts a key-value pair inside of this object.
-     * As {@link #obt(String)} and {@link #opt(String, Object)} the key can be either a path to a key
+     * As {@link #get(String)} and {@link #opt(String, Object)} the key can be either a path to a key
      * or a simple key.
      * <p>
      * This method will also try to serialize some objects, such as lists. Support for other classes
@@ -77,7 +76,7 @@ public interface ConfigurationObject extends ConfigurationElement {
     @Override
     default String string(StringBuilder builder) {
         for (String key : keySet()) {
-            Object o = obt(key);
+            Object o = get(key);
 
             if (o instanceof ConfigurationElement)
                 ((ConfigurationElement) o).string(builder);
