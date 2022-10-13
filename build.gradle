@@ -2,8 +2,8 @@ plugins {
     id 'java'
 }
 
-group 'me.mattoz'
-version '0.1 ALPHA'
+group 'io.ncmt'
+version 'v2-1.0'
 
 repositories {
     mavenCentral()
