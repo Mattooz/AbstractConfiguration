@@ -22,9 +22,6 @@ public interface SerializationNode extends Iterable<Object> {
 
     SerializationNode parent();
 
-    void setPathDelim(String delim);
-    String getPathDelim();
-
     String path();
 
 }
