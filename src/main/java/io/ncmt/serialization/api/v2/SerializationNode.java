@@ -14,7 +14,10 @@ public interface SerializationNode extends Iterable<Object> {
 
     void put(String key, Object val);
     void add(Object val);
+    void remove(Object val);
+    void remove(int index);
 
+    boolean checkKey(String key);
     boolean isRecord();
     boolean isArray();
     boolean isAtomic();

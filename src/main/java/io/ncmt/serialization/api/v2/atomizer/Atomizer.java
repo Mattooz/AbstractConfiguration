@@ -18,7 +18,6 @@ public interface Atomizer<SN extends SerializationNode> {
             String[].class, char[].class,
             boolean[].class,
 
-            null
     });
 
 
