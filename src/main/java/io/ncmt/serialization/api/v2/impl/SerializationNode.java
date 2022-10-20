@@ -1,34 +1,35 @@
 package io.ncmt.serialization.api.v2.impl;
 
-import io.ncmt.serialization.api.v2.Configuration;
 import io.ncmt.serialization.api.v2.SerializationException;
-import io.ncmt.serialization.api.v2.SerializationNode;
+import io.ncmt.serialization.api.v2.atomizer.Atomizer;
+import org.w3c.dom.TypeInfo;
 
+import javax.lang.model.type.TypeKind;
+import java.net.Proxy;
 import java.util.*;
 
-public class BasicSerializationNode implements SerializationNode {
-    private Object atomic = null;
-    private final List<BasicSerializationNode> nodes = new ArrayList<>();
+public class SerializationNode implements io.ncmt.serialization.api.v2.SerializationNode {
+    private String atomic = null;
+    private List<SerializationNode> nodes = new LinkedList<>();
     private String key = null;
-    private BasicSerializationNode parent;
+    private SerializationNode parent;
 
-    public BasicSerializationNode(String atomic, BasicSerializationNode node, String key) {
+    public SerializationNode(String atomic, SerializationNode node, String key) {
         this.atomic = atomic;
         this.nodes.add(node);
         this.key = key;
     }
 
     @Override
-    public Object get() {
+    public <E> E get() {
         if (isAtomic()) {
-            return this.atomic;
+            return (E) this.atomic;
         } else {
             throw new SerializationException("this element doesn't contain a single node");
         }
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <E> E get(int index) throws SerializationException {
         if (isArray()) {
             return (E) this.nodes.get(index);
@@ -38,43 +39,19 @@ public class BasicSerializationNode implements SerializationNode {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <E> E get(String key) throws SerializationException {
-        if(!isRecord()) throw new SerializationException("This is not a record");
-
-        Objects.requireNonNull(key, "Key can't be null");
-        if(key.isBlank()) throw new SerializationException("Key is blank");
-
-        var split = Arrays.asList(key.split(Configuration.getPathDelim()));
-
-        if(split.size() == 0) throw new SerializationException("Split didn't work");
-
-        var it = split.iterator();
-
-        var tmp = this;
-        while(it.hasNext()) {
-            var tmpKey = it.next();
-
-            if(it.hasNext() && !tmp.isRecord()) throw new SerializationException("Could not retrieve value at: " + key);
-
-            for(var child : tmp.nodes) {
-                if(child.key.equals(tmpKey)) {
-                    tmp = child;
-                    break;
+        String split[] = key.split(".");
+        SerializationNode temp = this;
+        for(int i = 0; i < split.length; i++){
+            if(temp.checkKey(split[i]) && temp.isArray()){
+                temp = temp.get(split[i+1]);
+            }
+            else {
+                if(temp.isRecord()){
+                    temp = temp.get();
                 }
             }
         }
-
-        E expected;
-
-        try {
-            if(tmp.isAtomic()) expected = (E) tmp.get();
-            else expected = (E) tmp;
-        } catch (Exception e) {
-            throw new SerializationException("Couldn't cast");
-        }
-
-        return expected;
 
     }
 
@@ -97,14 +74,14 @@ public class BasicSerializationNode implements SerializationNode {
     public void put(String key, Object val) {
         if (isArray()) {
 
-            this.nodes.add((BasicSerializationNode) val);
+            this.nodes.add((SerializationNode) val);
 
         }
     }
 
     @Override
     public void add(Object val) {
-        BasicSerializationNode node = (BasicSerializationNode) val;
+        SerializationNode node = (SerializationNode) val;
         if (isArray()) {
             this.atomic = val;
         } else {
@@ -148,18 +125,13 @@ public class BasicSerializationNode implements SerializationNode {
     }
 
     @Override
-    public SerializationNode parent() {
+    public io.ncmt.serialization.api.v2.SerializationNode parent() {
         return null;
     }
 
     @Override
     public String path() {
         return null;
-    }
-
-    @Override
-    public String key() {
-        return this.key;
     }
 
     @Override
