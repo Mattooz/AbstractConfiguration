@@ -4,7 +4,7 @@ import java.util.Optional;
 
 public interface SerializationNode extends Iterable<Object> {
 
-    <E> E get();
+    Object get();
     <E> E get(int index) throws SerializationException;
     <E> E get(String key) throws SerializationException;
 
@@ -25,6 +25,7 @@ public interface SerializationNode extends Iterable<Object> {
 
     SerializationNode parent();
 
+    String key();
     String path();
 
 }
