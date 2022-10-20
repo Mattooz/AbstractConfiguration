@@ -14,6 +14,7 @@ public interface SerializationNode extends Iterable<Object> {
 
     void put(String key, Object val);
     void add(Object val);
+    void set(Object atomic);
     void remove(Object val);
     void remove(int index);
 
