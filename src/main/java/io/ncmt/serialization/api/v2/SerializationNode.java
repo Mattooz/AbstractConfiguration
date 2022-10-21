@@ -1,16 +1,32 @@
 package io.ncmt.serialization.api.v2;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Optional;
 
 public interface SerializationNode extends Iterable<Object> {
 
-    <E> E get();
-    <E> E get(int index) throws SerializationException;
-    <E> E get(String key) throws SerializationException;
+    Collection<Class<?>> ATOMIC_TYPES = Arrays.asList(new Class<?>[] {
+            byte.class, short.class, int.class, long.class,
+            float.class, double.class,
+            String.class, char.class,
+            boolean.class
+    });
 
-    <E> Optional<E> opt();
-    <E> Optional<E> opt(int index);
-    <E> Optional<E> opt(String key);
+    Collection<Class<?>> ARRAY_ATOMIC_TYPES = Arrays.asList(new Class<?>[] {
+            byte[].class, short[].class, int[].class, long[].class,
+            float[].class, double[].class,
+            String[].class, char[].class,
+            boolean[].class
+    });
+
+    <E> E get(Class<E> eClass);
+    <E> E get(int index, Class<E> eClass) throws SerializationException;
+    <E> E get(String key, Class<E> eClass) throws SerializationException;
+
+    <E> Optional<E> opt(Class<E> eClass);
+    <E> Optional<E> opt(int index, Class<E> eClass);
+    <E> Optional<E> opt(String key, Class<E> eClass);
 
     void put(String key, Object val);
     void add(Object val);
@@ -26,6 +42,9 @@ public interface SerializationNode extends Iterable<Object> {
 
     SerializationNode parent();
 
+    String key();
     String path();
+
+
 
 }
