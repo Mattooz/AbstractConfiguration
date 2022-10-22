@@ -34,16 +34,17 @@ public interface SerializationNode extends Iterable<Object> {
     void remove(Object val);
     void remove(int index);
 
-    boolean checkKey(String key);
     boolean isRecord();
     boolean isArray();
     boolean isAtomic();
     boolean isNull();
+    boolean isRoot();
 
     SerializationNode parent();
 
     String key();
     String path();
+
 
 
 

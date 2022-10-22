@@ -5,7 +5,9 @@ import io.ncmt.serialization.api.v2.SerializationException;
 import io.ncmt.serialization.api.v2.SerializationNode;
 
 
+import java.io.StringWriter;
 import java.util.*;
+import java.util.function.ObjIntConsumer;
 
 
 @SuppressWarnings("unchecked")
@@ -19,12 +21,12 @@ public class BasicSerializationNode implements SerializationNode {
     }
 
     private Object atomic = null;
-    private List<BasicSerializationNode> nodes = new LinkedList<>();
+    private List<BasicSerializationNode> nodes = new ArrayList<>();
     private String key = null;
     private Types content;
     private BasicSerializationNode parent;
 
-    private BasicSerializationNode() {
+    public BasicSerializationNode() {
         this.content = Types.NULL;
     }
 
@@ -64,7 +66,7 @@ public class BasicSerializationNode implements SerializationNode {
 
     @Override
     public <E> E get(String key, Class<E> eClass) throws SerializationException {
-        if (!isRecord()) throw new SerializationException("This is not a record");
+        if (!isRecord() && !isNull()) throw new SerializationException("This is not a record");
 
         Objects.requireNonNull(key, "Key can't be null");
         if (key.isBlank()) throw new SerializationException("Key is blank");
@@ -82,18 +84,22 @@ public class BasicSerializationNode implements SerializationNode {
             if (it.hasNext() && !tmp.isRecord())
                 throw new SerializationException("Could not retrieve value at: " + key);
 
+            var found = false;
             for (var child : tmp.nodes) {
                 if (child.key.equals(tmpKey)) {
                     tmp = child;
+                    found = true;
                     break;
                 }
             }
+            if (!found)
+                throw new SerializationException("Couldn't find node at: " + key + "; Subkey \"" + tmpKey + "\" doesn't exist!");
         }
 
         E expected;
 
         try {
-            if (tmp.isAtomic()) expected = tmp.get(eClass);
+            if (tmp.isAtomic() && eClass != BasicSerializationNode.class) expected = tmp.get(eClass);
             else expected = eClass.cast(tmp);
         } catch (ClassCastException e) {
             throw new SerializationException("Couldn't cast");
@@ -106,7 +112,7 @@ public class BasicSerializationNode implements SerializationNode {
     public <E> Optional<E> opt(Class<E> eClass) {
         try {
             return Optional.of(get(eClass));
-        } catch (ClassCastException exception) {
+        } catch (ClassCastException | SerializationException exception) {
             return Optional.empty();
         }
     }
@@ -115,7 +121,7 @@ public class BasicSerializationNode implements SerializationNode {
     public <E> Optional<E> opt(int index, Class<E> eClass) {
         try {
             return Optional.of(get(index, eClass));
-        } catch (ClassCastException exception) {
+        } catch (ClassCastException | SerializationException exception) {
             return Optional.empty();
         }
     }
@@ -124,14 +130,14 @@ public class BasicSerializationNode implements SerializationNode {
     public <E> Optional<E> opt(String key, Class<E> eClass) {
         try {
             return Optional.of(get(key, eClass));
-        } catch (ClassCastException exception) {
+        } catch (ClassCastException | SerializationException exception) {
             return Optional.empty();
         }
     }
 
     @Override
     public void put(String key, Object val) {
-        if (!isRecord()) throw new SerializationException("This is not a record");
+        if (!isRecord() && !isNull()) throw new SerializationException("This is not a record");
         this.content = Types.RECORD;
 
         Objects.requireNonNull(key, "Key can't be null");
@@ -146,16 +152,20 @@ public class BasicSerializationNode implements SerializationNode {
             var tmpKey = split.get(i);
             var tmpNode = currentNode.opt(tmpKey, BasicSerializationNode.class).orElse(new BasicSerializationNode());
 
-            if(tmpNode.isNull())
+            if (tmpNode.isNull())
                 currentNode.put(tmpKey, tmpNode);
             currentNode = tmpNode;
         }
-
+        currentNode.content = Types.RECORD;
 
         var newNode = of(val);
-        newNode.key = key;
-        newNode.parent = parent;
-        currentNode.nodes.add(newNode);
+        newNode.key = split.get(split.size() - 1);
+        newNode.parent = currentNode;
+
+        var tmpNode = currentNode.opt(split.get(split.size() - 1), BasicSerializationNode.class).orElse(null);
+        if (tmpNode == null) currentNode.nodes.add(newNode);
+        else currentNode.nodes.set(currentNode.nodes.indexOf(tmpNode), newNode);
+
     }
 
     @Override
@@ -193,11 +203,6 @@ public class BasicSerializationNode implements SerializationNode {
     }
 
     @Override
-    public boolean checkKey(String key) {
-        return (Objects.equals(this.key, key));
-    }
-
-    @Override
     public boolean isRecord() {
         return this.content == Types.RECORD;
     }
@@ -218,16 +223,21 @@ public class BasicSerializationNode implements SerializationNode {
     }
 
     @Override
+    public boolean isRoot() {
+        return this.parent == null && this.key == null;
+    }
+
+    @Override
     public BasicSerializationNode parent() {
         return this.parent;
     }
 
     @Override
     public String key() {
-        if(this.parent != null && this.parent.isArray()) {
+        if (this.parent != null && this.parent.isArray()) {
             return "[" + this.parent.nodes.indexOf(this) + "]";
         }
-        return this.key;
+        return this.key == null ? "root" : this.key;
     }
 
     @Override
@@ -235,7 +245,7 @@ public class BasicSerializationNode implements SerializationNode {
         List<BasicSerializationNode> parents = new ArrayList<>();
 
         var parent = this;
-        while (this.parent != null) {
+        while (parent.parent != null) {
             parents.add(parent);
             parent = parent.parent;
         }
@@ -243,20 +253,63 @@ public class BasicSerializationNode implements SerializationNode {
         Collections.reverse(parents);
 
         var strBld = new StringBuilder();
-        parents.forEach(key -> strBld.append(key).append("."));
-        return strBld.substring(0, strBld.length() - 2);
+        parents.forEach(p -> strBld.append(p.key()).append("."));
+        return strBld.substring(0, strBld.length() - 1);
     }
 
     @Override
     public Iterator<Object> iterator() {
         Collection<Object> objects = new ArrayList<>();
         this.nodes.forEach(node -> {
-            if(node.isAtomic()) {
+            if (node.isAtomic()) {
                 objects.add(node.get(Object.class));
             } else objects.add(node);
         });
 
         return objects.iterator();
+    }
+
+    public int totalTreeSize() {
+        return 1 + nodes
+                .stream()
+                .mapToInt(BasicSerializationNode::totalTreeSize)
+                .sum();
+    }
+
+    public String treeView() {
+        /*
+         * EXAMPLE
+         * root
+         * |
+         * \--> chiave
+         * |     |
+         * |     \--> chiave2 = "string"
+         * |
+         * \--> chiave2 = 14
+         */
+        final var bld = new StringBuilder();
+
+        bld.append(isRoot() ? "root" : key());
+        if (isAtomic() || isNull()) {
+            bld.append(" = ").append(this.atomic);
+            return bld.toString();
+        }
+        bld.append("\n");
+
+        var it = nodes.iterator();
+        while(it.hasNext()) {
+            var node = it.next();
+            bld.append("|").append("\n");
+            var split = Arrays.asList(node.treeView().split("\n")).iterator();
+            bld.append("\\--> ").append(split.next()).append("\n");
+            split.forEachRemaining(line -> {
+                if (it.hasNext()) bld.append("|    ");
+                else bld.append("     ");
+                bld.append(line).append("\n");
+            });
+        }
+
+        return bld.toString();
     }
 
     public static BasicSerializationNode of(Object val) {
