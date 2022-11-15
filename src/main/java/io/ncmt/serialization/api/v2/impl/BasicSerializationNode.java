@@ -5,9 +5,10 @@ import io.ncmt.serialization.api.v2.SerializationException;
 import io.ncmt.serialization.api.v2.SerializationNode;
 
 
-import java.io.StringWriter;
 import java.util.*;
-import java.util.function.ObjIntConsumer;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.random.RandomGenerator;
+import java.util.stream.Stream;
 
 
 @SuppressWarnings("unchecked")
@@ -19,6 +20,7 @@ public class BasicSerializationNode implements SerializationNode {
         ARRAY,
         NULL
     }
+
 
     private Object atomic = null;
     private List<BasicSerializationNode> nodes = new ArrayList<>();
@@ -32,6 +34,7 @@ public class BasicSerializationNode implements SerializationNode {
 
     @Override
     public <E> E get(Class<E> eClass) {
+
         if (isAtomic()) {
             E res;
             try {
@@ -156,6 +159,7 @@ public class BasicSerializationNode implements SerializationNode {
                 currentNode.put(tmpKey, tmpNode);
             currentNode = tmpNode;
         }
+
         currentNode.content = Types.RECORD;
 
         var newNode = of(val);
@@ -237,7 +241,7 @@ public class BasicSerializationNode implements SerializationNode {
         if (this.parent != null && this.parent.isArray()) {
             return "[" + this.parent.nodes.indexOf(this) + "]";
         }
-        return this.key == null ? "root" : this.key;
+        return isRoot() ? "root" : this.key;
     }
 
     @Override
@@ -297,7 +301,7 @@ public class BasicSerializationNode implements SerializationNode {
         bld.append("\n");
 
         var it = nodes.iterator();
-        while(it.hasNext()) {
+        while (it.hasNext()) {
             var node = it.next();
             bld.append("|").append("\n");
             var split = Arrays.asList(node.treeView().split("\n")).iterator();
@@ -317,14 +321,10 @@ public class BasicSerializationNode implements SerializationNode {
             var newNode = new BasicSerializationNode();
             if (ATOMIC_TYPES.contains(val.getClass())) {
                 newNode.set(val);
-            } else if (ARRAY_ATOMIC_TYPES.contains(val.getClass())) {
-                var array = (Object[]) val;
-                for (Object o : array) {
-                    newNode.add(o);
-                }
+            } else if (val.getClass().isArray()) {
+                Stream.of((Object[]) val).forEach(newNode::add);
             } else {
-                var toString = val.toString();
-                newNode.set(toString);
+                newNode.set(val.toString());
             }
             return newNode;
         } else return (BasicSerializationNode) val;
